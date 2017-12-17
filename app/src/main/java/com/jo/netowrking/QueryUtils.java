@@ -1,18 +1,24 @@
 package com.jo.netowrking;
 
+import android.os.AsyncTask;
 import android.util.Log;
 
 import org.json.JSONArray;
 import org.json.JSONException;
 import org.json.JSONObject;
 
+import java.io.BufferedReader;
+import java.io.IOException;
+import java.io.InputStream;
+import java.io.InputStreamReader;
+import java.net.HttpURLConnection;
+import java.net.MalformedURLException;
+import java.net.URL;
+import java.nio.charset.Charset;
 import java.util.ArrayList;
 import java.util.Date;
 import java.util.List;
 
-/**
- * Created by ahmed on 16/12/2017.
- */
 
 public class QueryUtils {
    private static final String  JSON_STR = "{\"type\":\"FeatureCollection\",\"metadata\":{\"generated\":1513412506000,\"url\":\"https://earthquake.usgs.gov/fdsnws/event/1/query?format=geojson&starttime=2016-01-01&endtime=2016-01-31&minmag=6&limit=10\",\"title\":\"USGS Earthquakes\",\"status\":200,\"api\":\"1.5.8\",\"limit\":10,\"offset\":1,\"count\":10},\"features\":[{\"type\":\"Feature\",\"properties\":{\"mag\":7.2,\"place\":\"88km N of Yelizovo, Russia\",\"time\":1454124312220,\"updated\":1507756893844,\"tz\":720,\"url\":\"https://earthquake.usgs.gov/earthquakes/eventpage/us20004vvx\",\"detail\":\"https://earthquake.usgs.gov/fdsnws/event/1/query?eventid=us20004vvx&format=geojson\",\"felt\":2,\"cdi\":3.4,\"mmi\":5.8,\"alert\":\"green\",\"status\":\"reviewed\",\"tsunami\":1,\"sig\":798,\"net\":\"us\",\"code\":\"20004vvx\",\"ids\":\",gcmt20160130032510,at00o1qxho,pt16030050,us20004vvx,gcmt20160130032512,atlas20160130032512,\",\"sources\":\",gcmt,at,pt,us,gcmt,atlas,\",\"types\":\",associate,cap,dyfi,finite-fault,general-link,general-text,geoserve,impact-link,impact-text,losspager,moment-tensor,nearby-cities,origin,phase-data,shakemap,tectonic-summary,\",\"nst\":null,\"dmin\":0.958,\"rms\":1.19,\"gap\":17,\"magType\":\"mww\",\"type\":\"earthquake\",\"title\":\"M 7.2 - 88km N of Yelizovo, Russia\"},\"geometry\":{\"type\":\"Point\",\"coordinates\":[158.5463,53.9776,177]},\"id\":\"us20004vvx\"},\n" +
@@ -36,14 +42,77 @@ public class QueryUtils {
             "{\"type\":\"Feature\",\"properties\":{\"mag\":8.5,\"place\":\"227km SE of Sarangani, Philippines\",\"time\":1452530285900,\"updated\":1459304874040,\"tz\":480,\"url\":\"http://earthquake.usgs.gov/earthquakes/eventpage/us10004dj5\",\"detail\":\"http://earthquake.usgs.gov/fdsnws/event/1/query?eventid=us10004dj5&format=geojson\",\"felt\":1,\"cdi\":2.7,\"mmi\":7.5,\"alert\":\"green\",\"status\":\"reviewed\",\"tsunami\":1,\"sig\":650,\"net\":\"us\",\"code\":\"10004dj5\",\"ids\":\",at00o0srjp,pt16011050,us10004dj5,gcmt20160111163807,\",\"sources\":\",at,pt,us,gcmt,\",\"types\":\",cap,dyfi,geoserve,impact-link,impact-text,losspager,moment-tensor,nearby-cities,origin,phase-data,shakemap,tectonic-summary,\",\"nst\":null,\"dmin\":3.144,\"rms\":0.72,\"gap\":22,\"magType\":\"mww\",\"type\":\"earthquake\",\"title\":\"M 6.5 - 227km SE of Sarangani, Philippines\"},\"geometry\":{\"type\":\"Point\",\"coordinates\":[126.8621,3.8965,13]},\"id\":\"us10004dj5\"},\n" +
             "{\"type\":\"Feature\",\"properties\":{\"mag\":9,\"place\":\"Pacific-Antarctic Ridge\",\"time\":1451986454620,\"updated\":1459202978040,\"tz\":-540,\"url\":\"http://earthquake.usgs.gov/earthquakes/eventpage/us10004bgk\",\"detail\":\"http://earthquake.usgs.gov/fdsnws/event/1/query?eventid=us10004bgk&format=geojson\",\"felt\":0,\"cdi\":1,\"mmi\":0,\"alert\":\"green\",\"status\":\"reviewed\",\"tsunami\":0,\"sig\":554,\"net\":\"us\",\"code\":\"10004bgk\",\"ids\":\",us10004bgk,gcmt20160105093415,\",\"sources\":\",us,gcmt,\",\"types\":\",cap,dyfi,geoserve,losspager,moment-tensor,nearby-cities,origin,phase-data,shakemap,\",\"nst\":null,\"dmin\":30.75,\"rms\":0.67,\"gap\":71,\"magType\":\"mww\",\"type\":\"earthquake\",\"title\":\"M 6.0 - Pacific-Antarctic Ridge\"},\"geometry\":{\"type\":\"Point\",\"coordinates\":[-136.2603,-54.2906,10]},\"id\":\"us10004bgk\"}],\"bbox\":[-153.4051,-54.2906,10,158.5463,59.6363,582.56]}";
     private static final String LOCATION_SEPARATOR = " of ";
+
+    private static final String BASE_URL ="https://earthquake.usgs.gov/fdsnws/event/1/";
+    private static final String METHOD="query";
+
+    //Parameters
+    private static final String Format="format";
+    private static final String END_TIME="endtime";
+    private static final String START_TIME="starttime";
+    private static final String UPDATE_AFTER="updatedafter";
+    private static final String MAX_MAG="maxmagnitude";
+    private static final String MIN_MAG="minmagnitude";
+    private static final String LIMIT="limit";
+
+    //Parameters_default _values
+    private static final String DEFAULT_Format="geojson";
+    private static final String DEFAULT_END_TIME="2017-12-17";
+    private static final String DEFAULT_START_TIME="2016-12-17";
+    private static final String DEFAULT_UPDATE_AFTER="null";
+    private static final String DEFAULT_MAX_MAG="10";
+    private static final String DEFAULT_MIN_MAG="1";
+    private static final String DEFAULT_LIMIT="50";
+    public static List<EarthQuake> data;
     private QueryUtils() {
     }
-    public static List<EarthQuake> getjsonObjects(){
+    /*public static String createHTTPRequest(){
+
+    }*/
+    public static String makeHttpRequest(URL url) throws IOException {
+        String jsonResponse = "";
+        HttpURLConnection urlConnection = null;
+        InputStream inputStream = null;
+        try {
+            urlConnection = (HttpURLConnection) url.openConnection();
+            urlConnection.setRequestMethod("GET");
+            urlConnection.setReadTimeout(10000 /* milliseconds */);
+            urlConnection.setConnectTimeout(15000 /* milliseconds */);
+            urlConnection.connect();
+            inputStream = urlConnection.getInputStream();
+            jsonResponse = readFromStream(inputStream);
+        } catch (IOException e) {
+            // TODO: Handle the exception
+        } finally {
+            if (urlConnection != null) {
+                urlConnection.disconnect();
+            }
+            if (inputStream != null) {
+                // function must handle java.io.IOException here
+                inputStream.close();
+            }
+        }
+        return jsonResponse;
+    }
+    private static String readFromStream(InputStream inputStream) throws IOException {
+        StringBuilder output = new StringBuilder();
+        if (inputStream != null) {
+            InputStreamReader inputStreamReader = new InputStreamReader(inputStream, Charset.forName("UTF-8"));
+            BufferedReader reader = new BufferedReader(inputStreamReader);
+            String line = reader.readLine();
+            while (line != null) {
+                output.append(line);
+                line = reader.readLine();
+            }
+        }
+        return output.toString();
+    }
+    public static List<EarthQuake> getjsonObjects(String jsonResponse){
         List<EarthQuake> items = new ArrayList<>();
         String primaryLocation;
         String locationOffset;
         try {
-            JSONObject root = new JSONObject(JSON_STR);
+            JSONObject root = new JSONObject(jsonResponse);
             JSONArray earthquakes = root.getJSONArray("features");
             for(int i =0 ;i<earthquakes.length();i++){
                 JSONObject earthquakeData = earthquakes.getJSONObject(i);
