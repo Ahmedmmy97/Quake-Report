@@ -25,12 +25,7 @@ public class MainActivity extends AppCompatActivity {
         items.add(new EarthQuake(2.2,"6.4km from ","Cairo, Egypt", new Date()));
 */
         EarthQuakesAsync task = new EarthQuakesAsync();
-         try {
-             URL url = new URL("https://earthquake.usgs.gov/fdsnws/event/1/query?format=geojson&starttime=2016-01-01&endtime=2016-01-31&minmag=6&limit=10");
-             task.execute(url);
-         } catch (MalformedURLException e) {
-             e.printStackTrace();
-         }
+        task.execute(QueryUtils.createHTTPRequest());
 
     }
     private   class EarthQuakesAsync extends AsyncTask<URL, Void, List<EarthQuake>> {

@@ -1,5 +1,6 @@
 package com.jo.netowrking;
 
+import android.net.Uri;
 import android.os.AsyncTask;
 import android.util.Log;
 
@@ -58,7 +59,7 @@ public class QueryUtils {
     //Parameters_default _values
     private static final String DEFAULT_Format="geojson";
     private static final String DEFAULT_END_TIME="2017-12-17";
-    private static final String DEFAULT_START_TIME="2016-12-17";
+    private static final String DEFAULT_START_TIME="2016-01-01";
     private static final String DEFAULT_UPDATE_AFTER="null";
     private static final String DEFAULT_MAX_MAG="10";
     private static final String DEFAULT_MIN_MAG="1";
@@ -66,9 +67,23 @@ public class QueryUtils {
     public static List<EarthQuake> data;
     private QueryUtils() {
     }
-    /*public static String createHTTPRequest(){
 
-    }*/
+    public static URL createHTTPRequest(){
+        Uri builtUri = Uri.parse(BASE_URL).buildUpon().appendPath(METHOD)
+                .appendQueryParameter(Format, DEFAULT_Format)
+                .appendQueryParameter(START_TIME,DEFAULT_START_TIME)
+                .appendQueryParameter(END_TIME,DEFAULT_END_TIME)
+                .appendQueryParameter(MIN_MAG,DEFAULT_MIN_MAG)
+                .appendQueryParameter(LIMIT,DEFAULT_LIMIT)
+                .build();
+        URL url = null;
+        try {
+            url = new URL(builtUri.toString());
+        } catch (MalformedURLException e) {
+            e.printStackTrace();
+        }
+       return url;
+    }
     public static String makeHttpRequest(URL url) throws IOException {
         String jsonResponse = "";
         HttpURLConnection urlConnection = null;
